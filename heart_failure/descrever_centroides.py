@@ -40,10 +40,13 @@ df_centroides[colunas_numericas] = normalizador_num.inverse_transform(
 # ---------------------------
 # 5) Converter dummies contínuos em dummies binárias (one-hot por grupo)
 # ---------------------------
-# Agrupar colunas dummy por prefixo (tudo antes do primeiro '_')
+# Agrupar colunas dummy por prefixo (tudo exceto o último segmento após o último "_")
 groups = {}
 for col in dummy_cols:
-    prefix = col.split('_', 1)[0]
+    # Para "high_blood_pressure_0", queremos "high_blood_pressure"
+    # Para "anaemia_1", queremos "anaemia"
+    parts = col.rsplit('_', 1)  # Split do último underscore
+    prefix = parts[0]
     groups.setdefault(prefix, []).append(col)
 
 # DataFrame base contendo os valores originais (contínuos) das dummies
@@ -63,8 +66,23 @@ for prefix, cols in groups.items():
 # ---------------------------
 # 6) Reverter o from_dummies (apenas nas dummies binarias)
 # ---------------------------
-# pd.from_dummies() espera colunas 0/1 ou bool-like e converte para colunas categóricas
-df_categorias = pd.from_dummies(df_dummies_bin, sep='_')
+# Reverter one-hot → categorias originais manualmente
+# (não podemos usar from_dummies porque high_blood_pressure tem múltiplos underscores)
+df_categorias = pd.DataFrame(index=df_dummies_bin.index)
+for prefix, cols in groups.items():
+    # Para cada grupo, pegar o valor (0 ou 1) que está no final do nome da coluna
+    valores = []
+    for idx in df_dummies_bin.index:
+        # Encontrar qual coluna tem valor 1 para este prefixo
+        valor_encontrado = None
+        for col in cols:
+            if df_dummies_bin.loc[idx, col] == 1:
+                # Extrair o valor do final (0 ou 1)
+                valor = col.rsplit('_', 1)[1]
+                valor_encontrado = int(valor)
+                break
+        valores.append(valor_encontrado if valor_encontrado is not None else 0)
+    df_categorias[prefix] = valores
 
 # ---------------------------
 # 7) Montar DataFrame final

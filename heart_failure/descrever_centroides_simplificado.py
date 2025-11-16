@@ -35,10 +35,13 @@ df[colunas_num] = normalizador_num.inverse_transform(df[colunas_num])
 # =====================================
 # 4️⃣ Reverter dummies (argmax + from_dummies)
 # =====================================
-# Agrupar dummies pelo prefixo antes do "_"
+# Agrupar dummies pelo prefixo (tudo exceto o último segmento após o último "_")
 grupos = {}
 for c in colunas_dummies:
-    prefix = c.split('_', 1)[0]
+    # Para "high_blood_pressure_0", queremos "high_blood_pressure"
+    # Para "anaemia_1", queremos "anaemia"
+    parts = c.rsplit('_', 1)  # Split do último underscore
+    prefix = parts[0]
     grupos.setdefault(prefix, []).append(c)
 
 # Criar DataFrame binário (0/1) com base no maior valor por grupo
@@ -48,8 +51,24 @@ for prefix, cols in grupos.items():
     df_bin.loc[:, cols] = 0
     df_bin.values[np.arange(len(df)), [colunas_dummies.index(cols[i]) for i in idx_max]] = 1
 
-# Reverter one-hot → categorias originais
-df_cat = pd.from_dummies(df_bin, sep='_')
+# Reverter one-hot → categorias originais manualmente
+# (não podemos usar from_dummies porque high_blood_pressure tem múltiplos underscores)
+df_cat = pd.DataFrame(index=df_bin.index)
+for prefix, cols in grupos.items():
+    # Para cada grupo, pegar o valor (0 ou 1) que está no final do nome da coluna
+    # Ex: "high_blood_pressure_0" -> valor é "0", "high_blood_pressure_1" -> valor é "1"
+    valores = []
+    for idx in df_bin.index:
+        # Encontrar qual coluna tem valor 1 para este prefixo
+        valor_encontrado = None
+        for col in cols:
+            if df_bin.loc[idx, col] == 1:
+                # Extrair o valor do final (0 ou 1)
+                valor = col.rsplit('_', 1)[1]
+                valor_encontrado = int(valor)
+                break
+        valores.append(valor_encontrado if valor_encontrado is not None else 0)
+    df_cat[prefix] = valores
 
 # =====================================
 # 5️⃣ Juntar numéricas + categóricas
