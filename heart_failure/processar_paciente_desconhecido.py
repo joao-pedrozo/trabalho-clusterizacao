@@ -39,11 +39,16 @@ paciente = {
 # Converter para DataFrame
 df_paciente = pd.DataFrame([paciente])
 
+# Separar colunas numéricas e binárias
+colunas_binarias = ['anaemia', 'diabetes', 'high_blood_pressure', 'sex', 'smoking']
+# Converter colunas binárias para string (igual ao treino)
+df_paciente[colunas_binarias] = df_paciente[colunas_binarias].astype(str)
+
 # ==========================================
 # 4) Pré-processamento igual ao treino
 # ==========================================
 # Aplicar get_dummies para gerar mesmas colunas
-df_paciente_dummies = pd.get_dummies(df_paciente)
+df_paciente_dummies = pd.get_dummies(df_paciente, prefix=colunas_binarias, dtype=int)
 
 # Garantir que todas as colunas esperadas existam
 colunas_treino = [

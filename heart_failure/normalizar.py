@@ -32,6 +32,9 @@ dados_cat = dados[[
     'sex',
     'smoking']]
 
+# Converter colunas binárias numéricas para string para poder usar get_dummies
+dados_cat = dados_cat.astype(str)
+
 #Construir o objeto normalizador numérico (MinMaxScaler)
 normalizador_numerico = preprocessing.MinMaxScaler()
 
